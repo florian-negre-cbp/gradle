@@ -215,10 +215,7 @@ public class DefaultCopySpec implements CopySpecInternal {
 
     @Override
     public boolean isCaseSensitive() {
-        if (caseSensitive != null) {
-            return caseSensitive;
-        }
-        return true;
+        return caseSensitive != null ? caseSensitive : true;
     }
 
     @Override
@@ -229,10 +226,7 @@ public class DefaultCopySpec implements CopySpecInternal {
 
     @Override
     public boolean getIncludeEmptyDirs() {
-        if (includeEmptyDirs != null) {
-            return includeEmptyDirs;
-        }
-        return true;
+        return includeEmptyDirs != null ? includeEmptyDirs : true;
     }
 
     @Override
@@ -242,10 +236,7 @@ public class DefaultCopySpec implements CopySpecInternal {
 
     @Override
     public DuplicatesStrategy getDuplicatesStrategy() {
-        if (duplicatesStrategy != null) {
-            return duplicatesStrategy;
-        }
-        return DuplicatesStrategy.INCLUDE;
+        return duplicatesStrategy != null ? duplicatesStrategy : DuplicatesStrategy.INCLUDE;
     }
 
     @Override
@@ -431,18 +422,12 @@ public class DefaultCopySpec implements CopySpecInternal {
 
     @Override
     public Integer getDirMode() {
-        if (dirMode != null) {
-            return dirMode;
-        }
-        return null;
+        return dirMode;
     }
 
     @Override
     public Integer getFileMode() {
-        if (fileMode != null) {
-            return fileMode;
-        }
-        return null;
+        return fileMode;
     }
 
     @Override
@@ -486,10 +471,7 @@ public class DefaultCopySpec implements CopySpecInternal {
 
     @Override
     public String getFilteringCharset() {
-        if (filteringCharset != null) {
-            return filteringCharset;
-        }
-        return Charset.defaultCharset().name();
+        return filteringCharset != null ? filteringCharset : Charset.defaultCharset().name();
     }
 
     @Override
