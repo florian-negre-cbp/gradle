@@ -62,14 +62,6 @@ public abstract class AbstractCopyTask extends ConventionTask implements CopySpe
 
     protected AbstractCopyTask() {
         this.rootSpec = createRootSpec();
-        rootSpec.addChildSpecListener(new CopySpecInternal.CopySpecListener() {
-            @Override
-            public void childSpecAdded(final CopySpecInternal spec) {
-                if (getState().getExecuting()) {
-                    throw new GradleException("You cannot add child specs at execution time. Consider configuring this task during configuration time or using a separate task to do the configuration.");
-                }
-            }
-        });
         this.getOutputs().doNotCacheIf("Has custom actions", new Spec<Task>() {
             @Override
             public boolean isSatisfiedBy(Task task) {
@@ -79,15 +71,32 @@ public abstract class AbstractCopyTask extends ConventionTask implements CopySpe
         this.mainSpec = rootSpec.addChild();
     }
 
-    @Nested
-    ResolvedCopySpecNode getResolvedRootSpec() {
-        return rootSpec.resolveAsRoot();
+    // Not private in order for the instantiator to access
+    static class RootCopySpec extends DefaultCopySpec {
+        private final AbstractCopyTask copyTask;
+
+        public RootCopySpec(AbstractCopyTask copyTask, FileResolver resolver, Instantiator instantiator) {
+            super(null, resolver, instantiator);
+            this.copyTask = copyTask;
+        }
+
+        @Override
+        public void descendantAdded(CopySpecInternal childSpec) {
+            if (copyTask.getState().getExecuting()) {
+                throw new GradleException("You cannot add child specs at execution time. Consider configuring this task during configuration time or using a separate task to do the configuration.");
+            }
+        }
     }
 
     protected CopySpecInternal createRootSpec() {
         Instantiator instantiator = getInstantiator();
         FileResolver fileResolver = getFileResolver();
-        return instantiator.newInstance(DefaultCopySpec.class, null, fileResolver, instantiator);
+        return instantiator.newInstance(RootCopySpec.class, this, fileResolver, instantiator);
+    }
+
+    @Nested
+    ResolvedCopySpecNode getResolvedRootSpec() {
+        return rootSpec.resolveAsRoot();
     }
 
     protected abstract CopyAction createCopyAction();
@@ -153,6 +162,7 @@ public abstract class AbstractCopyTask extends ConventionTask implements CopySpe
     }
 
     @Internal
+    @Override
     public CopySpecInternal getRootSpec() {
         return rootSpec;
     }
@@ -170,6 +180,7 @@ public abstract class AbstractCopyTask extends ConventionTask implements CopySpe
      * {@inheritDoc}
      */
     @Internal
+    @Override
     public boolean isCaseSensitive() {
         return getMainSpec().isCaseSensitive();
     }
@@ -177,6 +188,7 @@ public abstract class AbstractCopyTask extends ConventionTask implements CopySpe
     /**
      * {@inheritDoc}
      */
+    @Override
     public void setCaseSensitive(boolean caseSensitive) {
         getMainSpec().setCaseSensitive(caseSensitive);
     }
@@ -185,6 +197,7 @@ public abstract class AbstractCopyTask extends ConventionTask implements CopySpe
      * {@inheritDoc}
      */
     @Internal
+    @Override
     public boolean getIncludeEmptyDirs() {
         return getMainSpec().getIncludeEmptyDirs();
     }
@@ -192,6 +205,7 @@ public abstract class AbstractCopyTask extends ConventionTask implements CopySpe
     /**
      * {@inheritDoc}
      */
+    @Override
     public void setIncludeEmptyDirs(boolean includeEmptyDirs) {
         getMainSpec().setIncludeEmptyDirs(includeEmptyDirs);
     }
@@ -199,6 +213,7 @@ public abstract class AbstractCopyTask extends ConventionTask implements CopySpe
     /**
      * {@inheritDoc}
      */
+    @Override
     public void setDuplicatesStrategy(@Nullable DuplicatesStrategy strategy) {
         getRootSpec().setDuplicatesStrategy(strategy);
     }
@@ -207,6 +222,7 @@ public abstract class AbstractCopyTask extends ConventionTask implements CopySpe
      * {@inheritDoc}
      */
     @Internal
+    @Override
     public DuplicatesStrategy getDuplicatesStrategy() {
         return getRootSpec().getDuplicatesStrategy();
     }
@@ -214,6 +230,7 @@ public abstract class AbstractCopyTask extends ConventionTask implements CopySpe
     /**
      * {@inheritDoc}
      */
+    @Override
     public AbstractCopyTask from(Object... sourcePaths) {
         getMainSpec().from(sourcePaths);
         return this;
@@ -222,6 +239,7 @@ public abstract class AbstractCopyTask extends ConventionTask implements CopySpe
     /**
      * {@inheritDoc}
      */
+    @Override
     public AbstractCopyTask filesMatching(String pattern, Action<? super FileCopyDetails> action) {
         getMainSpec().filesMatching(pattern, action);
         return this;
@@ -230,6 +248,7 @@ public abstract class AbstractCopyTask extends ConventionTask implements CopySpe
     /**
      * {@inheritDoc}
      */
+    @Override
     public AbstractCopyTask filesMatching(Iterable<String> patterns, Action<? super FileCopyDetails> action) {
         getMainSpec().filesMatching(patterns, action);
         return this;
@@ -238,6 +257,7 @@ public abstract class AbstractCopyTask extends ConventionTask implements CopySpe
     /**
      * {@inheritDoc}
      */
+    @Override
     public AbstractCopyTask filesNotMatching(String pattern, Action<? super FileCopyDetails> action) {
         getMainSpec().filesNotMatching(pattern, action);
         return this;
@@ -246,6 +266,7 @@ public abstract class AbstractCopyTask extends ConventionTask implements CopySpe
     /**
      * {@inheritDoc}
      */
+    @Override
     public AbstractCopyTask filesNotMatching(Iterable<String> patterns, Action<? super FileCopyDetails> action) {
         getMainSpec().filesNotMatching(patterns, action);
         return this;
@@ -254,6 +275,7 @@ public abstract class AbstractCopyTask extends ConventionTask implements CopySpe
     /**
      * {@inheritDoc}
      */
+    @Override
     public AbstractCopyTask from(Object sourcePath, final Closure c) {
         getMainSpec().from(sourcePath, new ClosureBackedAction<CopySpec>(c));
         return this;
@@ -262,6 +284,7 @@ public abstract class AbstractCopyTask extends ConventionTask implements CopySpe
     /**
      * {@inheritDoc}
      */
+    @Override
     public AbstractCopyTask from(Object sourcePath, @Nullable Action<? super CopySpec> configureAction) {
         getMainSpec().from(sourcePath, configureAction);
         return this;
@@ -270,6 +293,7 @@ public abstract class AbstractCopyTask extends ConventionTask implements CopySpe
     /**
      * {@inheritDoc}
      */
+    @Override
     public CopySpec with(CopySpec... sourceSpecs) {
         getMainSpec().with(sourceSpecs);
         return this;
@@ -278,6 +302,7 @@ public abstract class AbstractCopyTask extends ConventionTask implements CopySpe
     /**
      * {@inheritDoc}
      */
+    @Override
     public AbstractCopyTask into(Object destDir) {
         getRootSpec().into(destDir);
         return this;
@@ -286,6 +311,7 @@ public abstract class AbstractCopyTask extends ConventionTask implements CopySpe
     /**
      * {@inheritDoc}
      */
+    @Override
     public AbstractCopyTask into(Object destPath, Closure configureClosure) {
         getMainSpec().into(destPath, configureClosure);
         return this;
@@ -294,6 +320,7 @@ public abstract class AbstractCopyTask extends ConventionTask implements CopySpe
     /**
      * {@inheritDoc}
      */
+    @Override
     public CopySpec into(Object destPath, @Nullable Action<? super CopySpec> copySpec) {
         getMainSpec().into(destPath, copySpec);
         return this;
@@ -302,6 +329,7 @@ public abstract class AbstractCopyTask extends ConventionTask implements CopySpe
     /**
      * {@inheritDoc}
      */
+    @Override
     public AbstractCopyTask include(String... includes) {
         getMainSpec().include(includes);
         return this;
@@ -310,6 +338,7 @@ public abstract class AbstractCopyTask extends ConventionTask implements CopySpe
     /**
      * {@inheritDoc}
      */
+    @Override
     public AbstractCopyTask include(Iterable<String> includes) {
         getMainSpec().include(includes);
         return this;
@@ -318,6 +347,7 @@ public abstract class AbstractCopyTask extends ConventionTask implements CopySpe
     /**
      * {@inheritDoc}
      */
+    @Override
     public AbstractCopyTask include(Spec<FileTreeElement> includeSpec) {
         getMainSpec().include(includeSpec);
         return this;
@@ -326,6 +356,7 @@ public abstract class AbstractCopyTask extends ConventionTask implements CopySpe
     /**
      * {@inheritDoc}
      */
+    @Override
     public AbstractCopyTask include(Closure includeSpec) {
         getMainSpec().include(includeSpec);
         return this;
@@ -334,6 +365,7 @@ public abstract class AbstractCopyTask extends ConventionTask implements CopySpe
     /**
      * {@inheritDoc}
      */
+    @Override
     public AbstractCopyTask exclude(String... excludes) {
         getMainSpec().exclude(excludes);
         return this;
@@ -342,6 +374,7 @@ public abstract class AbstractCopyTask extends ConventionTask implements CopySpe
     /**
      * {@inheritDoc}
      */
+    @Override
     public AbstractCopyTask exclude(Iterable<String> excludes) {
         getMainSpec().exclude(excludes);
         return this;
@@ -350,6 +383,7 @@ public abstract class AbstractCopyTask extends ConventionTask implements CopySpe
     /**
      * {@inheritDoc}
      */
+    @Override
     public AbstractCopyTask exclude(Spec<FileTreeElement> excludeSpec) {
         getMainSpec().exclude(excludeSpec);
         return this;
@@ -358,6 +392,7 @@ public abstract class AbstractCopyTask extends ConventionTask implements CopySpe
     /**
      * {@inheritDoc}
      */
+    @Override
     public AbstractCopyTask exclude(Closure excludeSpec) {
         getMainSpec().exclude(excludeSpec);
         return this;
@@ -366,6 +401,7 @@ public abstract class AbstractCopyTask extends ConventionTask implements CopySpe
     /**
      * {@inheritDoc}
      */
+    @Override
     public AbstractCopyTask setIncludes(Iterable<String> includes) {
         getMainSpec().setIncludes(includes);
         return this;
@@ -374,6 +410,7 @@ public abstract class AbstractCopyTask extends ConventionTask implements CopySpe
     /**
      * {@inheritDoc}
      */
+    @Override
     @Internal
     public Set<String> getIncludes() {
         return getMainSpec().getIncludes();
@@ -382,6 +419,7 @@ public abstract class AbstractCopyTask extends ConventionTask implements CopySpe
     /**
      * {@inheritDoc}
      */
+    @Override
     public AbstractCopyTask setExcludes(Iterable<String> excludes) {
         getMainSpec().setExcludes(excludes);
         return this;
@@ -390,6 +428,7 @@ public abstract class AbstractCopyTask extends ConventionTask implements CopySpe
     /**
      * {@inheritDoc}
      */
+    @Override
     @Internal
     public Set<String> getExcludes() {
         return getMainSpec().getExcludes();
@@ -398,6 +437,7 @@ public abstract class AbstractCopyTask extends ConventionTask implements CopySpe
     /**
      * {@inheritDoc}
      */
+    @Override
     public AbstractCopyTask rename(final Closure closure) {
         return rename(new ClosureBackedTransformer(closure));
     }
@@ -405,6 +445,7 @@ public abstract class AbstractCopyTask extends ConventionTask implements CopySpe
     /**
      * {@inheritDoc}
      */
+    @Override
     public AbstractCopyTask rename(Transformer<String, String> renamer) {
         getMainSpec().rename(renamer);
         return this;
@@ -413,6 +454,7 @@ public abstract class AbstractCopyTask extends ConventionTask implements CopySpe
     /**
      * {@inheritDoc}
      */
+    @Override
     public AbstractCopyTask rename(String sourceRegEx, String replaceWith) {
         getMainSpec().rename(sourceRegEx, replaceWith);
         return this;
@@ -421,6 +463,7 @@ public abstract class AbstractCopyTask extends ConventionTask implements CopySpe
     /**
      * {@inheritDoc}
      */
+    @Override
     public AbstractCopyTask rename(Pattern sourceRegEx, String replaceWith) {
         getMainSpec().rename(sourceRegEx, replaceWith);
         return this;
@@ -429,6 +472,7 @@ public abstract class AbstractCopyTask extends ConventionTask implements CopySpe
     /**
      * {@inheritDoc}
      */
+    @Override
     public AbstractCopyTask filter(Map<String, ?> properties, Class<? extends FilterReader> filterType) {
         getMainSpec().filter(properties, filterType);
         return this;
@@ -437,6 +481,7 @@ public abstract class AbstractCopyTask extends ConventionTask implements CopySpe
     /**
      * {@inheritDoc}
      */
+    @Override
     public AbstractCopyTask filter(Class<? extends FilterReader> filterType) {
         getMainSpec().filter(filterType);
         return this;
@@ -445,6 +490,7 @@ public abstract class AbstractCopyTask extends ConventionTask implements CopySpe
     /**
      * {@inheritDoc}
      */
+    @Override
     public AbstractCopyTask filter(Closure closure) {
         getMainSpec().filter(closure);
         return this;
@@ -453,6 +499,7 @@ public abstract class AbstractCopyTask extends ConventionTask implements CopySpe
     /**
      * {@inheritDoc}
      */
+    @Override
     public AbstractCopyTask filter(Transformer<String, String> transformer) {
         getMainSpec().filter(transformer);
         return this;
@@ -461,6 +508,7 @@ public abstract class AbstractCopyTask extends ConventionTask implements CopySpe
     /**
      * {@inheritDoc}
      */
+    @Override
     public AbstractCopyTask expand(Map<String, ?> properties) {
         getMainSpec().expand(properties);
         return this;
@@ -469,6 +517,7 @@ public abstract class AbstractCopyTask extends ConventionTask implements CopySpe
     /**
      * {@inheritDoc}
      */
+    @Override
     @Internal
     public Integer getDirMode() {
         return getMainSpec().getDirMode();
@@ -477,6 +526,7 @@ public abstract class AbstractCopyTask extends ConventionTask implements CopySpe
     /**
      * {@inheritDoc}
      */
+    @Override
     @Internal
     public Integer getFileMode() {
         return getMainSpec().getFileMode();
@@ -485,7 +535,8 @@ public abstract class AbstractCopyTask extends ConventionTask implements CopySpe
     /**
      * {@inheritDoc}
      */
-    public AbstractCopyTask setDirMode(Integer mode) {
+    @Override
+    public AbstractCopyTask setDirMode(@Nullable Integer mode) {
         getMainSpec().setDirMode(mode);
         return this;
     }
@@ -493,7 +544,8 @@ public abstract class AbstractCopyTask extends ConventionTask implements CopySpe
     /**
      * {@inheritDoc}
      */
-    public AbstractCopyTask setFileMode(Integer mode) {
+    @Override
+    public AbstractCopyTask setFileMode(@Nullable Integer mode) {
         getMainSpec().setFileMode(mode);
         return this;
     }
@@ -501,6 +553,7 @@ public abstract class AbstractCopyTask extends ConventionTask implements CopySpe
     /**
      * {@inheritDoc}
      */
+    @Override
     public AbstractCopyTask eachFile(Action<? super FileCopyDetails> action) {
         getMainSpec().eachFile(action);
         return this;
@@ -509,6 +562,7 @@ public abstract class AbstractCopyTask extends ConventionTask implements CopySpe
     /**
      * {@inheritDoc}
      */
+    @Override
     public AbstractCopyTask eachFile(Closure closure) {
         getMainSpec().eachFile(closure);
         return this;
@@ -517,6 +571,7 @@ public abstract class AbstractCopyTask extends ConventionTask implements CopySpe
     /**
      * {@inheritDoc}
      */
+    @Override
     @Internal
     public String getFilteringCharset() {
         return getMainSpec().getFilteringCharset();
@@ -525,7 +580,8 @@ public abstract class AbstractCopyTask extends ConventionTask implements CopySpe
     /**
      * {@inheritDoc}
      */
-    public void setFilteringCharset(String charset) {
+    @Override
+    public void setFilteringCharset(@Nullable String charset) {
         getMainSpec().setFilteringCharset(charset);
     }
 }
