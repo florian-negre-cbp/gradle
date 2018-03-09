@@ -27,14 +27,21 @@ import org.gradle.internal.logging.TestOutputEventListener
 import org.gradle.internal.logging.progress.DefaultProgressLoggerFactory
 import org.gradle.internal.logging.progress.ProgressLoggerFactory
 import org.gradle.internal.logging.text.StyledTextOutputFactory
+import org.gradle.test.fixtures.ConcurrentTestUtil
 import org.gradle.util.RedirectStdOutAndErr
 import org.gradle.util.TextUtil
 import org.junit.Rule
 import org.slf4j.LoggerFactory
 import spock.lang.Specification
 
+import java.util.concurrent.BlockingDeque
+import java.util.concurrent.LinkedBlockingDeque
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 import java.util.logging.Level
 import java.util.logging.Logger
+
+import static org.gradle.util.TextUtil.platformLineSeparator
 
 class LoggingServiceRegistryTest extends Specification {
     final TestOutputEventListener outputEventListener = new TestOutputEventListener()
@@ -100,7 +107,7 @@ class LoggingServiceRegistryTest extends Specification {
     }
 
     def consumesSlf4jWhenStarted() {
-        StandardOutputListener listener = Mock()
+        DelayedOutputListener listener = new DelayedOutputListener()
 
         given:
         def registry = LoggingServiceRegistry.newCommandLineProcessLogging()
@@ -110,31 +117,28 @@ class LoggingServiceRegistryTest extends Specification {
 
         when:
         logger.warn("before")
-
-        then:
-        0 * listener._
-
-        when:
         loggingManager.levelInternal = LogLevel.WARN
         loggingManager.start()
         logger.info("ignored")
-        logger.warn("warning")
+        logger.warn("warning1")
+        logger.warn("warning2")
 
         then:
-        1 * listener.onOutput('warning')
-        1 * listener.onOutput(TextUtil.platformLineSeparator)
-        0 * listener._
+        listener.receives("warning1")
+        listener.receives(platformLineSeparator)
+        listener.receives("warning2")
+        listener.receives(platformLineSeparator)
 
         when:
         loggingManager.stop()
         logger.warn("after")
 
         then:
-        0 * listener._
+        listener.notReceived()
     }
 
     def consumesFromJavaUtilLoggingWhenStarted() {
-        StandardOutputListener listener = Mock()
+        StandardOutputListener listener = new DelayedOutputListener()
 
         given:
         def registry = LoggingServiceRegistry.newCommandLineProcessLogging()
@@ -144,27 +148,21 @@ class LoggingServiceRegistryTest extends Specification {
 
         when:
         logger.warning("before")
-
-        then:
-        0 * listener._
-
-        when:
         loggingManager.levelInternal = LogLevel.WARN
         loggingManager.start()
         logger.info("ignored")
         logger.warning("warning")
 
         then:
-        1 * listener.onOutput('warning')
-        1 * listener.onOutput(TextUtil.platformLineSeparator)
-        0 * listener._
+        listener.receives('warning')
+        listener.receives(platformLineSeparator)
 
         when:
         loggingManager.stop()
         logger.warning("after")
 
         then:
-        0 * listener._
+        listener.notReceived()
     }
 
     def configuresJavaUtilLoggingAndRestoresSettingsWhenStopped() {
@@ -198,7 +196,7 @@ class LoggingServiceRegistryTest extends Specification {
     }
 
     def consumesFromSystemOutAndErrWhenStarted() {
-        StandardOutputListener listener = Mock()
+        StandardOutputListener listener = new DelayedOutputListener()
 
         when:
         def registry = LoggingServiceRegistry.newCommandLineProcessLogging()
@@ -222,13 +220,12 @@ class LoggingServiceRegistryTest extends Specification {
         System.err.println("error")
 
         then:
-        1 * listener.onOutput("info")
-        1 * listener.onOutput(SystemProperties.instance.lineSeparator)
+        listener.receives("info")
+        listener.receives(platformLineSeparator)
 
         then:
-        1 * listener.onOutput("error")
-        1 * listener.onOutput(SystemProperties.instance.lineSeparator)
-        0 * listener._
+        listener.receives("error")
+        listener.receives(platformLineSeparator)
 
         when:
         loggingManager.stop()
@@ -239,7 +236,7 @@ class LoggingServiceRegistryTest extends Specification {
     }
 
     def canChangeAndRestoreSystemOutputAndErrorCaptureLevels() {
-        def listener = Mock(StandardOutputListener)
+        StandardOutputListener listener = new DelayedOutputListener()
 
         given:
         def registry = LoggingServiceRegistry.newCommandLineProcessLogging()
@@ -261,9 +258,8 @@ class LoggingServiceRegistryTest extends Specification {
         System.err.println("error")
 
         then:
-        1 * listener.onOutput("error")
-        1 * listener.onOutput(SystemProperties.instance.lineSeparator)
-        0 * listener._
+        listener.receives("error")
+        listener.receives(platformLineSeparator)
 
         when:
         nestedManager.stop()
@@ -272,15 +268,14 @@ class LoggingServiceRegistryTest extends Specification {
         System.err.println("error")
 
         then:
-        1 * listener.onOutput("info")
-        1 * listener.onOutput(SystemProperties.instance.lineSeparator)
-        1 * listener.onOutput("error")
-        1 * listener.onOutput(SystemProperties.instance.lineSeparator)
-        0 * listener._
+        listener.receives("info")
+        listener.receives(platformLineSeparator)
+        listener.receives("error")
+        listener.receives(platformLineSeparator)
     }
 
     def buffersLinesWrittenToSystemOutAndErr() {
-        StandardOutputListener listener = Mock()
+        StandardOutputListener listener = new DelayedOutputListener()
 
         given:
         def registry = LoggingServiceRegistry.newCommandLineProcessLogging()
@@ -294,7 +289,7 @@ class LoggingServiceRegistryTest extends Specification {
         System.err.print("err")
 
         then:
-        0 * listener._
+        listener.notReceived()
 
         when:
         System.out.println("fo")
@@ -302,13 +297,12 @@ class LoggingServiceRegistryTest extends Specification {
         System.err.println()
 
         then:
-        1 * listener.onOutput("info")
-        1 * listener.onOutput(SystemProperties.instance.lineSeparator)
+        listener.receives("info")
+        listener.receives(platformLineSeparator)
 
         then:
-        1 * listener.onOutput("error")
-        1 * listener.onOutput(SystemProperties.instance.lineSeparator)
-        0 * listener._
+        listener.receives("error")
+        listener.receives(platformLineSeparator)
 
         when:
         System.out.print("buffered")
@@ -316,8 +310,8 @@ class LoggingServiceRegistryTest extends Specification {
         System.err.flush()
 
         then:
-        1 * listener.onOutput("error")
-        0 * listener._
+        listener.receives("error")
+        listener.notReceived()
     }
 
     def routesStyledTextToListenersWhenStarted() {
@@ -394,8 +388,10 @@ class LoggingServiceRegistryTest extends Specification {
         logger.error("error")
 
         then:
-        outputs.stdOut == TextUtil.toPlatformLineSeparators('warning\n')
-        outputs.stdErr == TextUtil.toPlatformLineSeparators('error\n')
+        ConcurrentTestUtil.poll {
+            assert outputs.stdOut == TextUtil.toPlatformLineSeparators('warning\n')
+            assert outputs.stdErr == TextUtil.toPlatformLineSeparators('error\n')
+        }
     }
 
     def consumesSlf4jWhenEmbedded() {
@@ -403,7 +399,7 @@ class LoggingServiceRegistryTest extends Specification {
         def registry = LoggingServiceRegistry.newEmbeddableLogging()
         def logger = LoggerFactory.getLogger("category")
         def loggingManager = registry.newInstance(LoggingManagerInternal)
-        def listener = Mock(StandardOutputListener)
+        def listener = new DelayedOutputListener()
 
         when:
         loggingManager.levelInternal = LogLevel.WARN
@@ -414,15 +410,14 @@ class LoggingServiceRegistryTest extends Specification {
         logger.error("error")
 
         then:
-        1 * listener.onOutput("warning")
-        1 * listener.onOutput(TextUtil.platformLineSeparator)
-        1 * listener.onOutput("error")
-        1 * listener.onOutput(TextUtil.platformLineSeparator)
-        0 * listener._
+        listener.receives("warning")
+        listener.receives(platformLineSeparator)
+        listener.receives("error")
+        listener.receives(platformLineSeparator)
     }
 
     def doesNotRouteToSystemOutAndErrorWhenEmbedded() {
-        def listener = Mock(StandardOutputListener)
+        def listener = new DelayedOutputListener()
 
         given:
         def registry = LoggingServiceRegistry.newEmbeddableLogging()
@@ -438,11 +433,10 @@ class LoggingServiceRegistryTest extends Specification {
         logger.error("error")
 
         then:
-        1 * listener.onOutput("info")
-        1 * listener.onOutput(TextUtil.platformLineSeparator)
-        1 * listener.onOutput("error")
-        1 * listener.onOutput(TextUtil.platformLineSeparator)
-        0 * listener._
+        listener.receives("info")
+        listener.receives(platformLineSeparator)
+        listener.receives("error")
+        listener.receives(platformLineSeparator)
 
         and:
         outputs.stdOut == ''
@@ -450,7 +444,7 @@ class LoggingServiceRegistryTest extends Specification {
     }
 
     def doesNotConsumeJavaUtilLoggingWhenEmbedded() {
-        def listener = Mock(StandardOutputListener)
+        def listener = new DelayedOutputListener()
 
         given:
         def registry = LoggingServiceRegistry.newEmbeddableLogging()
@@ -467,7 +461,7 @@ class LoggingServiceRegistryTest extends Specification {
         logger.severe("error")
 
         then:
-        0 * listener._
+        listener.notReceived()
 
         and:
         outputs.stdOut == ''
@@ -475,7 +469,7 @@ class LoggingServiceRegistryTest extends Specification {
     }
 
     def canEnableConsumingJavaUtilLoggingWhenEmbedded() {
-        def listener = Mock(StandardOutputListener)
+        def listener = new DelayedOutputListener()
 
         given:
         def registry = LoggingServiceRegistry.newEmbeddableLogging()
@@ -492,7 +486,7 @@ class LoggingServiceRegistryTest extends Specification {
         logger.info("before")
 
         then:
-        0 * listener._
+        listener.notReceived()
 
         when:
         loggingManager.captureSystemSources()
@@ -501,11 +495,10 @@ class LoggingServiceRegistryTest extends Specification {
         logger.severe("error")
 
         then:
-        1 * listener.onOutput('warning')
-        1 * listener.onOutput(TextUtil.platformLineSeparator)
-        1 * listener.onOutput('error')
-        1 * listener.onOutput(TextUtil.platformLineSeparator)
-        0 * listener._
+        listener.receives('warning')
+        listener.receives(platformLineSeparator)
+        listener.receives('error')
+        listener.receives(platformLineSeparator)
 
         when:
         loggingManager.stop()
@@ -514,7 +507,7 @@ class LoggingServiceRegistryTest extends Specification {
         logger.info("after")
 
         then:
-        0 * listener._
+        listener.notReceived()
     }
 
     def restoresJavaUtilLoggingSettingsWhenEmbeddedAndStopped() {
@@ -561,7 +554,7 @@ class LoggingServiceRegistryTest extends Specification {
     }
 
     def canEnabledConsumingFromSystemOutAndErrWhenEmbedded() {
-        StandardOutputListener listener = Mock()
+        StandardOutputListener listener = new DelayedOutputListener()
 
         when:
         def registry = LoggingServiceRegistry.newEmbeddableLogging()
@@ -586,13 +579,12 @@ class LoggingServiceRegistryTest extends Specification {
         System.err.println("error")
 
         then:
-        1 * listener.onOutput("info")
-        1 * listener.onOutput(SystemProperties.instance.lineSeparator)
+        listener.receives("info")
+        listener.receives(SystemProperties.instance.lineSeparator)
 
         then:
-        1 * listener.onOutput("error")
-        1 * listener.onOutput(SystemProperties.instance.lineSeparator)
-        0 * listener._
+        listener.receives("error")
+        listener.receives(SystemProperties.instance.lineSeparator)
 
         when:
         loggingManager.stop()
@@ -607,7 +599,7 @@ class LoggingServiceRegistryTest extends Specification {
         def registry = LoggingServiceRegistry.newNestedLogging()
         def logger = LoggerFactory.getLogger("category")
         def loggingManager = registry.newInstance(LoggingManagerInternal)
-        def listener = Mock(StandardOutputListener)
+        def listener = new DelayedOutputListener()
 
         when:
         loggingManager.levelInternal = LogLevel.WARN
@@ -618,7 +610,7 @@ class LoggingServiceRegistryTest extends Specification {
         logger.error("error")
 
         then:
-        0 * listener._
+        listener.notReceived()
     }
 
     def doesNotConsumeJavaUtilLoggingWhenNested() {
@@ -670,5 +662,31 @@ class LoggingServiceRegistryTest extends Specification {
         and:
         outputs.stdOut == ''
         outputs.stdErr == ''
+    }
+
+    private static class DelayedOutputListener implements StandardOutputListener {
+        final BlockingDeque<CharSequence> queue = new LinkedBlockingDeque<>()
+
+        @Override
+        void onOutput(CharSequence output) {
+            queue.add(output)
+        }
+
+        void receives(String output) {
+            String next = queue.pollFirst(500, TimeUnit.MILLISECONDS)
+            if (next == null) {
+                throw new TimeoutException("Timed out waiting for output: ${next}")
+            }
+            if (next != output) {
+                throw new IllegalStateException("Expected output '${output}' but got '${next}'")
+            }
+        }
+
+        void notReceived() {
+            String next = queue.pollFirst(250, TimeUnit.MILLISECONDS)
+            if (next != null) {
+                throw new IllegalStateException("Found output when none was expected: ${next}")
+            }
+        }
     }
 }

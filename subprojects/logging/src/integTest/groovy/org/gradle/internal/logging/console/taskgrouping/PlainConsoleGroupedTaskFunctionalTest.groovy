@@ -50,7 +50,7 @@ class PlainConsoleGroupedTaskFunctionalTest extends AbstractIntegrationSpec {
         result.groupedOutput.task(':bar').output == "bar First line of text\nbar Second line of text"
     }
 
-    def "output from outside of tasks are present"() {
+    def "output logged from outside of tasks is present"() {
         given:
         buildFile << """Thread.start { 
             println 'bar'

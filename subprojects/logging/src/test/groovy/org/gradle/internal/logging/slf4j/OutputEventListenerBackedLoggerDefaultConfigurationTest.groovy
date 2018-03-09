@@ -18,6 +18,7 @@ package org.gradle.internal.logging.slf4j
 
 import org.gradle.api.logging.Logging
 import org.gradle.internal.time.Time
+import org.gradle.test.fixtures.ConcurrentTestUtil
 import org.gradle.util.TextUtil
 import org.slf4j.Logger
 import spock.lang.Specification
@@ -59,11 +60,13 @@ class OutputEventListenerBackedLoggerDefaultConfigurationTest extends Specificat
         logger().info(Logging.QUIET, "quiet")
 
         then:
-        err.empty
-        out == TextUtil.toPlatformLineSeparators("""lifecycle
+        ConcurrentTestUtil.poll {
+            assert err.empty
+            assert out == TextUtil.toPlatformLineSeparators("""lifecycle
 warn
 quiet
 """)
+        }
     }
 
     def "messages logged at ERROR level are directed to default error stream"() {
@@ -91,9 +94,11 @@ quiet
         logger().error("error stacktrace coming", e)
 
         then:
-        out == TextUtil.toPlatformLineSeparators("""warn stacktrace coming
+        ConcurrentTestUtil.poll {
+            assert out == TextUtil.toPlatformLineSeparators("""warn stacktrace coming
 """ + stacktrace(e))
-        err == TextUtil.toPlatformLineSeparators("""error stacktrace coming
+            assert err == TextUtil.toPlatformLineSeparators("""error stacktrace coming
 """ + stacktrace(e))
+        }
     }
 }

@@ -26,6 +26,7 @@ import org.gradle.internal.logging.events.OutputEventListener
 import org.gradle.internal.nativeintegration.console.ConsoleMetaData
 import org.gradle.internal.operations.BuildOperationCategory
 import org.gradle.internal.time.Time
+import org.gradle.test.fixtures.ConcurrentTestUtil
 import org.gradle.util.RedirectStdOutAndErr
 import org.junit.Rule
 import spock.lang.Unroll
@@ -48,8 +49,10 @@ class OutputEventRendererTest extends OutputSpecification {
         renderer.onOutput(event('message', LogLevel.INFO))
 
         then:
-        outputs.stdOut.readLines() == ['message']
-        outputs.stdErr == ''
+        ConcurrentTestUtil.poll {
+            assert outputs.stdOut.readLines() == ['message']
+            assert outputs.stdErr == ''
+        }
     }
 
     def rendersErrorLogEventsToStdErr() {
@@ -58,8 +61,10 @@ class OutputEventRendererTest extends OutputSpecification {
         renderer.onOutput(event('message', LogLevel.ERROR))
 
         then:
-        outputs.stdOut == ''
-        outputs.stdErr.readLines() == ['message']
+        ConcurrentTestUtil.poll {
+            assert outputs.stdOut == ''
+            assert outputs.stdErr.readLines() == ['message']
+        }
     }
 
     def rendersLogEventsWhenLogLevelIsDebug() {
@@ -71,7 +76,7 @@ class OutputEventRendererTest extends OutputSpecification {
         renderer.onOutput(event(tenAm, 'message', LogLevel.INFO))
 
         then:
-        listener.value.readLines() == ['10:00:00.000 [INFO] [category] message']
+        listener.receives(['10:00:00.000 [INFO] [category] message'])
     }
 
     def rendersLogEventsToStdOutandStdErrWhenLogLevelIsDebug() {
@@ -82,8 +87,10 @@ class OutputEventRendererTest extends OutputSpecification {
         renderer.onOutput(event(tenAm, 'error', LogLevel.ERROR))
 
         then:
-        outputs.stdOut.readLines() == ['10:00:00.000 [INFO] [category] info']
-        outputs.stdErr.readLines() == ['10:00:00.000 [ERROR] [category] error']
+        ConcurrentTestUtil.poll {
+            assert outputs.stdOut.readLines() == ['10:00:00.000 [INFO] [category] info']
+            assert outputs.stdErr.readLines() == ['10:00:00.000 [ERROR] [category] error']
+        }
     }
 
     def rendersLogEventsToStdOutListener() {
@@ -95,7 +102,7 @@ class OutputEventRendererTest extends OutputSpecification {
         renderer.onOutput(event('error', LogLevel.ERROR))
 
         then:
-        listener.value.readLines() == ['info']
+        listener.receives(['info'])
     }
 
     def doesNotRenderLogEventsToRemovedStdOutListener() {
@@ -120,7 +127,7 @@ class OutputEventRendererTest extends OutputSpecification {
         renderer.onOutput(event(tenAm, 'message', LogLevel.INFO))
 
         then:
-        listener.value.readLines() == ['10:00:00.000 [INFO] [category] message']
+        listener.receives(['10:00:00.000 [INFO] [category] message'])
     }
 
     def rendersErrorLogEventsToStdErrListener() {
@@ -132,7 +139,7 @@ class OutputEventRendererTest extends OutputSpecification {
         renderer.onOutput(event('error', LogLevel.ERROR))
 
         then:
-        listener.value.readLines() == ['error']
+        listener.receives(['error'])
     }
 
     def doesNotRenderLogEventsToRemovedStdErrListener() {
@@ -157,7 +164,7 @@ class OutputEventRendererTest extends OutputSpecification {
         renderer.onOutput(event(tenAm, 'message', LogLevel.ERROR))
 
         then:
-        listener.value.readLines() == ['10:00:00.000 [ERROR] [category] message']
+        listener.receives(['10:00:00.000 [ERROR] [category] message'])
     }
 
     def forwardsOutputEventsToListener() {
@@ -229,7 +236,7 @@ class OutputEventRendererTest extends OutputSpecification {
         renderer.onOutput(event('debug', LogLevel.DEBUG))
 
         then:
-        listener.value.readLines() == ['info']
+        listener.receives(['info'])
     }
 
     def rendersProgressEvents() {
@@ -239,8 +246,10 @@ class OutputEventRendererTest extends OutputSpecification {
         renderer.onOutput(complete('status'))
 
         then:
-        outputs.stdOut.readLines() == ['description status']
-        outputs.stdErr == ''
+        ConcurrentTestUtil.poll {
+            assert outputs.stdOut.readLines() == ['description status']
+            assert outputs.stdErr == ''
+        }
     }
 
     def doesNotRendersProgressEventsForLogLevelQuiet() {
@@ -340,8 +349,10 @@ class OutputEventRendererTest extends OutputSpecification {
 
         then:
         console.buildOutputArea.toString().readLines() == ['info']
-        outputs.stdOut == ''
-        outputs.stdErr.readLines() == ['error']
+        ConcurrentTestUtil.poll {
+            assert outputs.stdOut == ''
+            assert outputs.stdErr.readLines() == ['error']
+        }
     }
 
     def attachesConsoleWhenOnlyStdErrIsAttachedToConsole() {
@@ -355,8 +366,10 @@ class OutputEventRendererTest extends OutputSpecification {
 
         then:
         console.buildOutputArea.toString().readLines() == ['{error}error', '{normal}']
-        outputs.stdOut.readLines() == ['info']
-        outputs.stdErr == ''
+        ConcurrentTestUtil.poll {
+            assert outputs.stdOut.readLines() == ['info']
+            assert outputs.stdErr == ''
+        }
     }
 }
 
@@ -369,6 +382,12 @@ class TestListener implements StandardOutputListener {
 
     public void onOutput(CharSequence output) {
         writer.append(output);
+    }
+
+    public void receives(List<String> lines) {
+        ConcurrentTestUtil.poll(1) {
+            assert value.readLines() == lines
+        }
     }
 }
 
