@@ -104,7 +104,7 @@ public abstract class DelegatingCopySpecInternal implements CopySpecInternal {
     }
 
     @Override
-    public CopySpec from(Object sourcePath, @Nullable Action<? super CopySpec> configureAction) {
+    public CopySpec from(Object sourcePath, Action<? super CopySpec> configureAction) {
         return getDelegateCopySpec().from(sourcePath, configureAction);
     }
 
@@ -169,7 +169,7 @@ public abstract class DelegatingCopySpecInternal implements CopySpecInternal {
     }
 
     @Override
-    public CopySpec into(Object destPath, @Nullable Action<? super CopySpec> copySpec) {
+    public CopySpec into(Object destPath, Action<? super CopySpec> copySpec) {
         return getDelegateCopySpec().into(destPath, copySpec);
     }
 

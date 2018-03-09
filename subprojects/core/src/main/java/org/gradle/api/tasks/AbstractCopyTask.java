@@ -280,7 +280,7 @@ public abstract class AbstractCopyTask extends ConventionTask implements CopySpe
      * {@inheritDoc}
      */
     @Override
-    public AbstractCopyTask from(Object sourcePath, @Nullable Action<? super CopySpec> configureAction) {
+    public AbstractCopyTask from(Object sourcePath, Action<? super CopySpec> configureAction) {
         getMainSpec().from(sourcePath, configureAction);
         return this;
     }
@@ -316,7 +316,7 @@ public abstract class AbstractCopyTask extends ConventionTask implements CopySpe
      * {@inheritDoc}
      */
     @Override
-    public CopySpec into(Object destPath, @Nullable Action<? super CopySpec> copySpec) {
+    public CopySpec into(Object destPath, Action<? super CopySpec> copySpec) {
         getMainSpec().into(destPath, copySpec);
         return this;
     }

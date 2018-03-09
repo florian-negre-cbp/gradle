@@ -126,7 +126,7 @@ public class DefaultCopySpec implements CopySpecInternal {
     }
 
     @Override
-    public CopySpec from(Object sourcePath, @Nullable Action<? super CopySpec> configureAction) {
+    public CopySpec from(Object sourcePath, Action<? super CopySpec> configureAction) {
         if (configureAction == null) {
             from(sourcePath);
             return this;
@@ -196,7 +196,7 @@ public class DefaultCopySpec implements CopySpecInternal {
     }
 
     @Override
-    public CopySpec into(Object destPath, @Nullable Action<? super CopySpec> copySpec) {
+    public CopySpec into(Object destPath, Action<? super CopySpec> copySpec) {
         if (copySpec == null) {
             into(destPath);
             return this;
