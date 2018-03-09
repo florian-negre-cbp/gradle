@@ -76,20 +76,31 @@ public class OutputEventRenderer implements OutputEventListener, LoggingRouter {
 
     public OutputEventRenderer(final Clock clock) {
         this.clock = clock;
-        OutputEventListener stdOutChain = new LazyListener(new Factory<OutputEventListener>() {
+        OutputEventListener outputStreamChain = new LazyListener(new Factory<OutputEventListener>() {
             @Override
             public OutputEventListener create() {
-                return onNonError(new UserInputStandardOutputRenderer(new BuildLogLevelFilterRenderer(new ProgressLogEventGenerator(new StyledTextOutputBackedRenderer(new StreamingStyledTextOutput(stdoutListeners.getSource())), false)), clock));
+                return getOutputStreamChain();
             }
         });
-        formatters.add(stdOutChain);
-        OutputEventListener stdErrChain = new LazyListener(new Factory<OutputEventListener>() {
+        formatters.add(outputStreamChain);
+    }
+
+    public OutputEventListener getOutputStreamChain() {
+        final OutputEventListener stdOutChain = new UserInputStandardOutputRenderer(new BuildLogLevelFilterRenderer(new ProgressLogEventGenerator(new StyledTextOutputBackedRenderer(new StreamingStyledTextOutput(stdoutListeners.getSource())), false)), clock);
+        final OutputEventListener stdErrChain = new BuildLogLevelFilterRenderer(new ProgressLogEventGenerator(new StyledTextOutputBackedRenderer(new StreamingStyledTextOutput(stderrListeners.getSource())), false));
+        return new OutputEventListener() {
             @Override
-            public OutputEventListener create() {
-                return onError(new BuildLogLevelFilterRenderer(new ProgressLogEventGenerator(new StyledTextOutputBackedRenderer(new StreamingStyledTextOutput(stderrListeners.getSource())), false)));
+            public void onOutput(OutputEvent event) {
+                if (event.getLogLevel() == null) {
+                    stdOutChain.onOutput(event);
+                    stdErrChain.onOutput(event);
+                } else if (event.getLogLevel() == LogLevel.ERROR) {
+                    stdErrChain.onOutput(event);
+                } else {
+                    stdOutChain.onOutput(event);
+                }
             }
-        });
-        formatters.add(stdErrChain);
+        };
     }
 
     @Override
