@@ -58,6 +58,7 @@ public abstract class AbstractCopyTask extends ConventionTask implements CopySpe
 
     private final CopySpecInternal rootSpec;
     private final CopySpecInternal mainSpec;
+    private ResolvedCopySpecNode resolvedRootSpec;
 
     protected AbstractCopyTask() {
         this.rootSpec = createRootSpec();
@@ -95,7 +96,10 @@ public abstract class AbstractCopyTask extends ConventionTask implements CopySpe
 
     @Nested
     ResolvedCopySpecNode getResolvedRootSpec() {
-        return rootSpec.resolveAsRoot();
+        if (resolvedRootSpec == null) {
+            resolvedRootSpec = rootSpec.resolveAsRoot();
+        }
+        return resolvedRootSpec;
     }
 
     protected abstract CopyAction createCopyAction();
@@ -129,7 +133,7 @@ public abstract class AbstractCopyTask extends ConventionTask implements CopySpe
     protected void copy() {
         CopyActionExecuter copyActionExecuter = createCopyActionExecuter();
         CopyAction copyAction = createCopyAction();
-        WorkResult didWork = copyActionExecuter.execute(rootSpec, copyAction);
+        WorkResult didWork = copyActionExecuter.execute(getResolvedRootSpec(), copyAction);
         setDidWork(didWork.getDidWork());
     }
 
