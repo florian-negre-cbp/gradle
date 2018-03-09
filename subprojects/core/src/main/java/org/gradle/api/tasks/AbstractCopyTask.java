@@ -38,6 +38,7 @@ import org.gradle.api.internal.file.copy.CopyActionExecuter;
 import org.gradle.api.internal.file.copy.CopySpecInternal;
 import org.gradle.api.internal.file.copy.CopySpecSource;
 import org.gradle.api.internal.file.copy.DefaultCopySpec;
+import org.gradle.api.internal.file.copy.ResolvedCopySpec;
 import org.gradle.api.internal.file.copy.ResolvedCopySpecNode;
 import org.gradle.api.specs.Spec;
 import org.gradle.internal.nativeplatform.filesystem.FileSystem;
@@ -46,9 +47,7 @@ import org.gradle.internal.reflect.Instantiator;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 import java.io.FilterReader;
-import java.util.ArrayDeque;
 import java.util.Map;
-import java.util.Queue;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -148,16 +147,12 @@ public abstract class AbstractCopyTask extends ConventionTask implements CopySpe
     @Internal
     public FileCollection getSource() {
         final ImmutableList.Builder<FileTree> builder = ImmutableList.builder();
-        Queue<ResolvedCopySpecNode> queue = new ArrayDeque<ResolvedCopySpecNode>();
-        queue.add(getResolvedRootSpec());
-        while (true) {
-            ResolvedCopySpecNode node = queue.poll();
-            if (node == null) {
-                break;
+        getResolvedRootSpec().walk(new Action<ResolvedCopySpec>() {
+            @Override
+            public void execute(ResolvedCopySpec spec) {
+                builder.add(spec.getSource());
             }
-            builder.add(node.getSpec().getSource());
-            queue.addAll(node.getChildren());
-        }
+        });
         return getFileResolver().compositeFileTree(builder.build());
     }
 
