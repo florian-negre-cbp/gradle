@@ -18,6 +18,7 @@ package org.gradle.api.internal.file.copy;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import groovy.lang.Closure;
 import org.gradle.api.Action;
 import org.gradle.api.InvalidUserDataException;
@@ -55,12 +56,12 @@ import java.util.regex.Pattern;
 @NonExtensible
 public class DefaultCopySpec implements CopySpecInternal {
     private static final NotationParser<Object, String> PATH_NOTATION_PARSER = PathNotationConverter.parser();
-    private final CopySpecInternal parent;
     protected final FileResolver fileResolver;
-    private final Set<Object> sourcePaths;
+    private final Set<Object> sourcePaths = new LinkedHashSet<Object>();
     private Object destDir;
     private final PatternSet patternSet;
-    private final List<CopySpecInternal> childSpecs;
+    private final List<CopySpecInternal> parentSpecs = Lists.newLinkedList();
+    private final List<CopySpecInternal> childSpecs = Lists.newLinkedList();
     protected final Instantiator instantiator;
     private final List<Action<? super FileCopyDetails>> copyActions = new ArrayList<Action<? super FileCopyDetails>>();
     private boolean hasCustomActions;
@@ -71,14 +72,10 @@ public class DefaultCopySpec implements CopySpecInternal {
     private DuplicatesStrategy duplicatesStrategy;
     private String filteringCharset;
 
-    public DefaultCopySpec(@Nullable CopySpecInternal parent, FileResolver resolver, Instantiator instantiator) {
-        this.parent = parent;
+    public DefaultCopySpec(FileResolver resolver, Instantiator instantiator) {
         this.fileResolver = resolver;
         this.instantiator = instantiator;
-        sourcePaths = new LinkedHashSet<Object>();
-        childSpecs = new ArrayList<CopySpecInternal>();
-        patternSet = resolver.getPatternSetFactory().create();
-        duplicatesStrategy = null;
+        this.patternSet = resolver.getPatternSetFactory().create();
     }
 
     @Override
@@ -145,14 +142,14 @@ public class DefaultCopySpec implements CopySpecInternal {
     }
 
     protected CopySpecInternal addChildAtPosition(int position) {
-        DefaultCopySpec child = instantiator.newInstance(DefaultCopySpec.class, this, fileResolver, instantiator);
+        DefaultCopySpec child = instantiator.newInstance(DefaultCopySpec.class, fileResolver, instantiator);
         addChildSpec(position, child);
         return child;
     }
 
     @Override
     public CopySpecInternal addChild() {
-        DefaultCopySpec child = new DefaultCopySpec(this, fileResolver, instantiator);
+        DefaultCopySpec child = new DefaultCopySpec(fileResolver, instantiator);
         addChildSpec(child);
         return child;
     }
@@ -163,19 +160,25 @@ public class DefaultCopySpec implements CopySpecInternal {
         return position != -1 ? addChildAtPosition(position) : addChild();
     }
 
-    protected void addChildSpec(CopySpecInternal childSpec) {
+    private void addChildSpec(CopySpecInternal childSpec) {
         addChildSpec(childSpecs.size(), childSpec);
     }
 
-    protected void addChildSpec(int index, CopySpecInternal childSpec) {
+    private void addChildSpec(int index, CopySpecInternal childSpec) {
         childSpecs.add(index, childSpec);
+        childSpec.addedToParent(this);
         descendantAdded(childSpec);
     }
 
     @Override
-    public void descendantAdded(CopySpecInternal childSpec) {
-        if (parent != null) {
-            parent.descendantAdded(childSpec);
+    public void addedToParent(CopySpecInternal parent) {
+        parentSpecs.add(parent);
+    }
+
+    @Override
+    public void descendantAdded(CopySpecInternal descendantSpec) {
+        for (CopySpecInternal parent : parentSpecs) {
+            parent.descendantAdded(descendantSpec);
         }
     }
 
@@ -185,7 +188,7 @@ public class DefaultCopySpec implements CopySpecInternal {
     }
 
     @Override
-    public DefaultCopySpec into(Object destDir) {
+    public CopySpec into(Object destDir) {
         this.destDir = destDir;
         return this;
     }
@@ -214,7 +217,7 @@ public class DefaultCopySpec implements CopySpecInternal {
         if (caseSensitive != null) {
             return caseSensitive;
         }
-        return parent == null || parent.isCaseSensitive();
+        return true;
     }
 
     @Override
@@ -228,7 +231,7 @@ public class DefaultCopySpec implements CopySpecInternal {
         if (includeEmptyDirs != null) {
             return includeEmptyDirs;
         }
-        return parent == null || parent.getIncludeEmptyDirs();
+        return true;
     }
 
     @Override
@@ -240,9 +243,6 @@ public class DefaultCopySpec implements CopySpecInternal {
     public DuplicatesStrategy getDuplicatesStrategy() {
         if (duplicatesStrategy != null) {
             return duplicatesStrategy;
-        }
-        if (parent != null) {
-            return parent.getDuplicatesStrategy();
         }
         return DuplicatesStrategy.INCLUDE;
     }
@@ -353,7 +353,7 @@ public class DefaultCopySpec implements CopySpecInternal {
     }
 
     @Override
-    public DefaultCopySpec setExcludes(Iterable<String> excludes) {
+    public CopySpec setExcludes(Iterable<String> excludes) {
         patternSet.setExcludes(excludes);
         return this;
     }
@@ -433,9 +433,6 @@ public class DefaultCopySpec implements CopySpecInternal {
         if (dirMode != null) {
             return dirMode;
         }
-        if (parent != null) {
-            return parent.getDirMode();
-        }
         return null;
     }
 
@@ -443,9 +440,6 @@ public class DefaultCopySpec implements CopySpecInternal {
     public Integer getFileMode() {
         if (fileMode != null) {
             return fileMode;
-        }
-        if (parent != null) {
-            return parent.getFileMode();
         }
         return null;
     }
@@ -493,9 +487,6 @@ public class DefaultCopySpec implements CopySpecInternal {
     public String getFilteringCharset() {
         if (filteringCharset != null) {
             return filteringCharset;
-        }
-        if (parent != null) {
-            return parent.getFilteringCharset();
         }
         return Charset.defaultCharset().name();
     }
