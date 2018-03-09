@@ -42,16 +42,13 @@ class AbstractCopyTaskTest extends WorkspaceTest {
         given:
         file("include") << "bar"
 
-        expect:
-        task.rootSpec.hasSource() == false
-
         when:
         task.from testDirectory.absolutePath
         task.include "include"
 
         then:
         task.mainSpec.getIncludes() == ["include"].toSet()
-        task.mainSpec.buildRootResolver().source.files == task.project.fileTree(testDirectory).files
+        task.mainSpec.resolveAsRoot().spec.source.files == task.project.fileTree(testDirectory).files
     }
 
     @Unroll

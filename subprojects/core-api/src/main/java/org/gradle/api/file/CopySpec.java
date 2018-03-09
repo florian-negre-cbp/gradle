@@ -218,7 +218,7 @@ public interface CopySpec extends CopySourceSpec, CopyProcessingSpec, PatternFil
     /**
      * {@inheritDoc}
      */
-    CopySpec from(Object sourcePath, Action<? super CopySpec> configureAction);
+    CopySpec from(Object sourcePath, @Nullable Action<? super CopySpec> configureAction);
 
     // PatternFilterable overrides to broaden return type
 
@@ -317,7 +317,7 @@ public interface CopySpec extends CopySourceSpec, CopyProcessingSpec, PatternFil
      * @param copySpec The action to use to configure the child {@code CopySpec}.
      * @return this
      */
-    CopySpec into(Object destPath, Action<? super CopySpec> copySpec);
+    CopySpec into(Object destPath, @Nullable Action<? super CopySpec> copySpec);
 
     /**
      * {@inheritDoc}
@@ -391,5 +391,5 @@ public interface CopySpec extends CopySourceSpec, CopyProcessingSpec, PatternFil
      * @since 2.14
      */
     @Incubating
-    void setFilteringCharset(String charset);
+    void setFilteringCharset(@Nullable String charset);
 }
