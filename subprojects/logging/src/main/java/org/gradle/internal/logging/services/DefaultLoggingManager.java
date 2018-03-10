@@ -80,6 +80,7 @@ public class DefaultLoggingManager implements LoggingManagerInternal, Closeable 
     }
 
     public DefaultLoggingManager stop() {
+        loggingRouter.flush();
         try {
             CompositeStoppable.stoppable(slf4jLoggingSystem, javaUtilLoggingSystem, stdOutLoggingSystem, stdErrLoggingSystem).stop();
             for (StandardOutputListener stdoutListener : stdoutListeners) {
@@ -260,6 +261,10 @@ public class DefaultLoggingManager implements LoggingManagerInternal, Closeable 
                 loggingRouter.configure(logLevel);
             }
             level = logLevel;
+        }
+
+        public void flush() {
+            loggingRouter.flush();
         }
 
         @Override

@@ -146,6 +146,7 @@ public class DefaultLoggingManagerTest extends Specification {
         then:
         1 * slf4jLoggingSystem.restore(slf4jSnapshot)
         1 * javaUtilLoggingSystem.restore(javaUtilSnapshot)
+        1 * loggingRouter.flush()
         1 * loggingRouter.restore(routerSnapshot)
         0 * loggingRouter._
         0 * slf4jLoggingSystem._
@@ -173,6 +174,7 @@ public class DefaultLoggingManagerTest extends Specification {
         loggingManager.stop()
 
         then:
+        1 * loggingRouter.flush()
         1 * loggingRouter.restore(routerSnapshot)
         1 * slf4jLoggingSystem.restore(slf4jSnapshot)
         1 * javaUtilLoggingSystem.restore(javaUtilSnapshot)
@@ -245,6 +247,7 @@ public class DefaultLoggingManagerTest extends Specification {
         then:
         1 * slf4jLoggingSystem.restore(slf4jSnapshot)
         1 * javaUtilLoggingSystem.restore(javaUtilSnapshot)
+        1 * loggingRouter.flush()
         1 * loggingRouter.restore(routerSnapshot)
         0 * loggingRouter._
         0 * slf4jLoggingSystem._
@@ -448,6 +451,7 @@ public class DefaultLoggingManagerTest extends Specification {
         loggingManager.stop()
 
         then:
+        1 * loggingRouter.flush()
         1 * loggingRouter.restore(snapshot)
         0 * loggingRouter._
     }
@@ -473,6 +477,7 @@ public class DefaultLoggingManagerTest extends Specification {
         loggingManager.stop()
 
         then:
+        1 * loggingRouter.flush()
         1 * loggingRouter.restore(snapshot)
         0 * loggingRouter._
     }
@@ -495,6 +500,7 @@ public class DefaultLoggingManagerTest extends Specification {
         loggingManager.stop()
 
         then:
+        1 * loggingRouter.flush()
         1 * loggingRouter.restore(snapshot)
         0 * loggingRouter._
     }
@@ -521,6 +527,7 @@ public class DefaultLoggingManagerTest extends Specification {
         loggingManager.stop()
 
         then:
+        1 * loggingRouter.flush()
         1 * loggingRouter.restore(snapshot)
         0 * loggingRouter._
     }

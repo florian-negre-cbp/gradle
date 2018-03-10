@@ -37,6 +37,7 @@ import org.gradle.internal.logging.console.UserInputConsoleRenderer;
 import org.gradle.internal.logging.console.UserInputStandardOutputRenderer;
 import org.gradle.internal.logging.console.WorkInProgressRenderer;
 import org.gradle.internal.logging.events.EndOutputEvent;
+import org.gradle.internal.logging.events.FlushOutputEvent;
 import org.gradle.internal.logging.events.LogLevelChangeEvent;
 import org.gradle.internal.logging.events.OutputEvent;
 import org.gradle.internal.logging.events.OutputEventListener;
@@ -101,6 +102,11 @@ public class OutputEventRenderer implements OutputEventListener, LoggingRouter {
                 }
             }
         };
+    }
+
+    @Override
+    public void flush() {
+        onOutput(new FlushOutputEvent());
     }
 
     @Override

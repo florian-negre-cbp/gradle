@@ -50,8 +50,6 @@ import org.gradle.internal.io.LineBufferingOutputStream;
 import org.gradle.internal.io.TextStream;
 import org.gradle.internal.jvm.Jvm;
 import org.gradle.internal.logging.LoggingManagerInternal;
-import org.gradle.internal.logging.events.FlushOutputEvent;
-import org.gradle.internal.logging.sink.OutputEventRenderer;
 import org.gradle.internal.nativeintegration.ProcessEnvironment;
 import org.gradle.launcher.Main;
 import org.gradle.launcher.cli.ExecuteBuildAction;
@@ -318,8 +316,6 @@ public class InProcessGradleExecuter extends AbstractGradleExecuter {
                     stopMeasurement();
                 }
             } finally {
-                // TODO: Ugly hack to ensure output is flushed - we need a cleaner way to do this
-                GLOBAL_SERVICES.get(OutputEventRenderer.class).onOutput(new FlushOutputEvent());
                 loggingManager.stop();
             }
             return new BuildResult(null, null);
