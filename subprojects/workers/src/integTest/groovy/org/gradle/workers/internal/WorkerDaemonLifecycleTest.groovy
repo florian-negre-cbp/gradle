@@ -16,6 +16,7 @@
 
 package org.gradle.workers.internal
 
+import org.gradle.test.fixtures.ConcurrentTestUtil
 import spock.lang.Timeout
 
 @Timeout(60)
@@ -89,7 +90,7 @@ class WorkerDaemonLifecycleTest extends AbstractDaemonWorkerExecutorIntegrationS
 
         then:
         daemons.daemon.stops()
-        sinceSnapshot().contains("Stopped 1 worker daemon(s).")
+        loggedSinceSnapshot("Stopped 1 worker daemon(s).")
     }
 
     def "worker daemons are stopped and not reused when log level is changed"() {
@@ -116,7 +117,7 @@ class WorkerDaemonLifecycleTest extends AbstractDaemonWorkerExecutorIntegrationS
         succeeds "runInWorker2"
 
         then:
-        sinceSnapshot().contains("Log level has changed, stopping idle worker daemon with out-of-date log level.")
+        loggedSinceSnapshot("Log level has changed, stopping idle worker daemon with out-of-date log level.")
 
         and:
         assertDifferentDaemonsWereUsed("runInWorker1", "runInWorker2")
@@ -179,8 +180,8 @@ class WorkerDaemonLifecycleTest extends AbstractDaemonWorkerExecutorIntegrationS
         succeeds "compileJava", "runInWorker"
 
         then:
-        sinceSnapshot().count("Started Gradle worker daemon") == 2
-        sinceSnapshot().contains("Stopped 1 worker daemon(s).")
+        loggedSinceSnapshot("Started Gradle worker daemon", 2)
+        loggedSinceSnapshot("Stopped 1 worker daemon(s).")
         newSnapshot()
 
         when:
@@ -188,7 +189,7 @@ class WorkerDaemonLifecycleTest extends AbstractDaemonWorkerExecutorIntegrationS
 
         then:
         daemons.daemon.stops()
-        sinceSnapshot().contains("Stopped 1 worker daemon(s).")
+        loggedSinceSnapshot("Stopped 1 worker daemon(s).")
     }
 
     void newSnapshot() {
@@ -197,5 +198,11 @@ class WorkerDaemonLifecycleTest extends AbstractDaemonWorkerExecutorIntegrationS
 
     String sinceSnapshot() {
         return daemons.daemon.log - logSnapshot
+    }
+
+    void loggedSinceSnapshot(String message, int count=1) {
+        ConcurrentTestUtil.poll {
+            assert sinceSnapshot().count(message) == count
+        }
     }
 }

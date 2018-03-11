@@ -203,6 +203,7 @@ public class OutputEventRenderer implements OutputEventListener, LoggingRouter {
     }
 
     private void removeStandardOutputListener() {
+        flush();
         synchronized (lock) {
             if (stdOutListener != null) {
                 stdoutListeners.remove(stdOutListener);
@@ -212,6 +213,7 @@ public class OutputEventRenderer implements OutputEventListener, LoggingRouter {
     }
 
     private void removeStandardErrorListener() {
+        flush();
         synchronized (lock) {
             if (stdErrListener != null) {
                 stderrListeners.remove(stdErrListener);
@@ -227,6 +229,7 @@ public class OutputEventRenderer implements OutputEventListener, LoggingRouter {
     }
 
     public void removeOutputEventListener(OutputEventListener listener) {
+        flush();
         synchronized (lock) {
             formatters.remove(listener);
         }
@@ -307,12 +310,14 @@ public class OutputEventRenderer implements OutputEventListener, LoggingRouter {
 
 
     public void removeStandardOutputListener(StandardOutputListener listener) {
+        flush();
         synchronized (lock) {
             stdoutListeners.remove(listener);
         }
     }
 
     public void removeStandardErrorListener(StandardOutputListener listener) {
+        flush();
         synchronized (lock) {
             stderrListeners.remove(listener);
         }

@@ -72,6 +72,7 @@ public class ThrottlingOutputEventListener implements OutputEventListener {
             if (newEvent instanceof FlushOutputEvent) {
                 // immediately flush any output
                 renderNow(clock.getCurrentTime());
+                return;
             }
 
             if (newEvent instanceof EndOutputEvent) {

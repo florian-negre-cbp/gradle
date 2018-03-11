@@ -109,6 +109,9 @@ class WorkerExecutorLoggingIntegrationTest extends AbstractWorkerExecutorIntegra
                     java.util.logging.Logger.getLogger("worker").severe("jul error");
                     System.out.println("stdout message");
                     System.err.println("stderr message");
+                    
+                    // TODO: this is a workaround to get any isolated logging chains flushed
+                    LoggerFactory.getILoggerFactory().getOutputEventListener().flush()
                 }
             }
         """.stripIndent()

@@ -133,9 +133,10 @@ public class DaemonMain extends EntryPoint {
             daemon.stop();
             // TODO: Stop all daemon services
             CompositeStoppable.stoppable(daemonServices.get(GradleUserHomeScopeServiceRegistry.class)).stop();
+            loggingManager.stop();
         }
     }
-    
+
     private static void invalidArgs(String message) {
         System.out.println("USAGE: <gradle version>");
         System.out.println(message);
